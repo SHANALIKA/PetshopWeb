@@ -1,28 +1,54 @@
 name: Deploy to GitHub Pages
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
+# Permissions for GitHub Pages and OIDC token
+permissions:
+  pages: write
+  id-token: write
+
+# Concurrency to prevent simultaneous deployments
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+
+      # Set up Node.js (if your project requires it, e.g., for React, Vite)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: github-pages
-          path: ./dist/ # Adjust this to the folder containing your built site
+          node-version: '20' # Specify your Node.js version
+
+      # Install dependencies and build the site
+      - name: Install dependencies
+        run: npm ci # Use npm ci for CI environments; replace with yarn/pnpm if needed
+      - name: Build site
+        run: npm run build # Replace with your build command, e.g., `yarn build`
+
+      # Configure GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # Upload the built site (specify the correct build output path)
+      - name: Upload static site to artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist # Replace with your build output directory, e.g., `build`, `public`
+
+      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/deploy-pages@v3
